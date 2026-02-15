@@ -1,0 +1,8 @@
+{
+  "name": "Verdicto – AI Legal Intelligence",
+  "description": "An AI-powered system for analyzing Indian criminal law case descriptions, predicting IPC sections, verdicts, and punishments.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
