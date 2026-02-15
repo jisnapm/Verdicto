@@ -38,8 +38,8 @@ cd Verdicto
 npm install
 
 # Configuration
-# Create a .env.local file with VITE_GEMINI_API_KEY
-# Update services/firebase.ts with your Firebase credentials
+Create a .env.local file with VITE_GEMINI_API_KEY
+Update services/firebase.ts with your Firebase credentials
 
 # Start development server
 npm run dev
