@@ -1,6 +1,6 @@
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import { CaseAnalysis } from "../types";
+import { CaseAnalysis, PrecedentCase } from "../types";
 
 // Vite uses import.meta.env to access environment variables
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
@@ -46,7 +46,42 @@ export async function analyzeLegalCase(caseText: string): Promise<CaseAnalysis> 
         summary: { type: SchemaType.STRING },
         precedents: {
           type: SchemaType.ARRAY,
-          items: { type: SchemaType.STRING }
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              case_name: { type: SchemaType.STRING },
+              similarity: { type: SchemaType.NUMBER },
+              factual_background: { type: SchemaType.STRING },
+              summary: { type: SchemaType.STRING },
+              ipc_sections: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    section: { type: SchemaType.STRING },
+                    title: { type: SchemaType.STRING },
+                    description: { type: SchemaType.STRING },
+                    bailable: { type: SchemaType.STRING },
+                    compoundable: { type: SchemaType.STRING }
+                  },
+                  required: ["section", "title", "description", "bailable", "compoundable"]
+                }
+              },
+              predicted_verdict: { type: SchemaType.STRING },
+              punishment: { type: SchemaType.STRING },
+              legal_sections: { type: SchemaType.STRING }
+            },
+            required: [
+              "case_name",
+              "similarity",
+              "factual_background",
+              "summary",
+              "ipc_sections",
+              "predicted_verdict",
+              "punishment",
+              "legal_sections"
+            ]
+          }
         }
       },
       required: ["ipc_sections", "predicted_verdict", "punishment", "summary", "precedents"]
@@ -59,6 +94,13 @@ export async function analyzeLegalCase(caseText: string): Promise<CaseAnalysis> 
       const model = genAI.getGenerativeModel({ model: modelName, generationConfig });
       
       const prompt = `Analyze the following Indian criminal case and provide a structured legal opinion.
+
+Also provide 3-6 similar precedent cases as structured objects. For EACH precedent:
+- case_name: the case title
+- similarity: number from 0 to 100
+- factual_background: a detailed factual summary (4-8 sentences) describing what happened in that precedent case
+- summary: a short 1-2 sentence gist
+- ipc_sections, predicted_verdict, punishment, legal_sections: structured analysis for that precedent case
       
       Case Description:
       ${caseText}`;
@@ -66,13 +108,38 @@ export async function analyzeLegalCase(caseText: string): Promise<CaseAnalysis> 
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const rawData = JSON.parse(response.text());
-      
-      return {
-        ...rawData,
+
+      const normalizedPrecedents: (string | PrecedentCase)[] = Array.isArray(rawData.precedents)
+        ? rawData.precedents.map((p: any) => {
+            if (typeof p === "string") {
+              // Backward compatibility / safety: allow plain text entries.
+              return p;
+            }
+            return {
+              caseName: p.case_name,
+              similarity: p.similarity,
+              factual_background: p.factual_background,
+              summary: p.summary,
+              ipc_sections: p.ipc_sections,
+              predicted_verdict: p.predicted_verdict,
+              punishment: p.punishment,
+              legal_sections: p.legal_sections
+            } as PrecedentCase;
+          })
+        : [];
+
+      const normalized: CaseAnalysis = {
+        ipc_sections: rawData.ipc_sections,
+        predicted_verdict: rawData.predicted_verdict,
+        punishment: rawData.punishment,
+        summary: rawData.summary,
+        precedents: normalizedPrecedents,
         id: Math.random().toString(36).substr(2, 9),
         timestamp: Date.now(),
         inputText: caseText
       };
+
+      return normalized;
     } catch (error: any) {
       lastError = error;
       console.warn(`${modelName} failed:`, error.message);

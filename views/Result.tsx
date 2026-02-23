@@ -1,12 +1,31 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CaseAnalysis } from '../types';
+import { CaseAnalysis, PrecedentCase } from '../types';
 
 const Result: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const analysis = location.state?.analysis as CaseAnalysis;
+  const state = (location.state || {}) as {
+    analysis?: CaseAnalysis;
+    isPrecedent?: boolean;
+  };
+  const analysis = state.analysis as CaseAnalysis | undefined;
+  const isPrecedentView = !!state.isPrecedent;
+
+  const isStructuredPrecedent = (p: CaseAnalysis['precedents'][number]): p is PrecedentCase =>
+    typeof p === 'object' && p !== null && 'caseName' in p && 'similarity' in p;
+
+  const handlePrecedentClick = (prec: PrecedentCase, index: number) => {
+    if (!analysis) return;
+
+    navigate('/precedent-result', {
+      state: {
+        precedent: prec,
+        sourceAnalysis: analysis
+      }
+    });
+  };
 
   if (!analysis) {
     return (
@@ -23,7 +42,21 @@ const Result: React.FC = () => {
         <button onClick={() => navigate('/home')} className="p-2 -ml-2 text-slate-400">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
-        <h2 className="text-2xl font-bold text-slate-800">Verdict Prediction</h2>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-800">Verdict Prediction</h2>
+            {isPrecedentView && (
+              <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-semibold uppercase tracking-widest">
+                Similar Precedent
+              </span>
+            )}
+          </div>
+          {isPrecedentView && (
+            <p className="text-[11px] text-slate-500 mt-1">
+              This is a detailed analysis of a similar past case suggested by Verdicto.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -78,15 +111,47 @@ const Result: React.FC = () => {
         {/* Precedents */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 material-shadow">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Similar Precedents</h3>
-          <ul className="space-y-4">
-            {analysis.precedents.map((prec, i) => (
-              <li key={i} className="flex gap-4 items-start">
-                <div className="w-6 h-6 bg-slate-100 text-slate-500 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
-                  {i+1}
-                </div>
-                <span className="text-sm text-slate-600 font-medium">{prec}</span>
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {analysis.precedents.map((prec, i) => {
+              if (isStructuredPrecedent(prec)) {
+                const similarityLabel = `${Math.round(prec.similarity)}% Similar`;
+                return (
+                  <li key={i}>
+                    <button
+                      onClick={() => handlePrecedentClick(prec, i)}
+                      className="w-full flex items-center justify-between gap-3 bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.98]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-slate-100 text-slate-500 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-slate-800">
+                            {prec.caseName} <span className="text-xs text-blue-600 font-bold ml-1">– {similarityLabel}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 line-clamp-2 mt-1">
+                            {prec.summary}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-blue-600 font-bold uppercase tracking-widest whitespace-nowrap">
+                        View Analysis →
+                      </span>
+                    </button>
+                  </li>
+                );
+              }
+
+              // Fallback for legacy plain-text precedents
+              return (
+                <li key={i} className="flex gap-4 items-start">
+                  <div className="w-6 h-6 bg-slate-100 text-slate-500 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
+                    {i + 1}
+                  </div>
+                  <span className="text-sm text-slate-600 font-medium">{prec}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

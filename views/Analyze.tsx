@@ -75,7 +75,7 @@ const Analyze: React.FC<AnalyzeProps> = ({ onSave }) => {
             value={caseText}
             onChange={(e) => setCaseText(e.target.value)}
             className="w-full h-64 px-5 py-4 rounded-3xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-slate-50 resize-none text-slate-800 leading-relaxed"
-            placeholder="e.g. A group of four individuals entered a private bank at midnight. They forced the vault open and took ₹50 Lakhs in cash..."
+            placeholder="Enter case details here..."
           />
         </div>
 

@@ -12,6 +12,7 @@ import Analyze from './views/Analyze';
 import History from './views/History';
 import About from './views/About';
 import Result from './views/Result';
+import PrecedentResult from './views/PrecedentResult';
 import { User, CaseAnalysis } from './types';
 
 const App: React.FC = () => {
@@ -172,6 +173,7 @@ const App: React.FC = () => {
           <Route path="/analyze" element={<Analyze onSave={saveCase} />} />
           <Route path="/history" element={<History history={history} onDelete={deleteCase} />} />
           <Route path="/result" element={<Result />} />
+          <Route path="/precedent-result" element={<PrecedentResult />} />
           <Route path="/about" element={<About />} />
         </Routes>
       </div>
